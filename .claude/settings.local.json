@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sips -g pixelWidth -g pixelHeight IMG_7078.gif)",
+      "Bash(sips -s format png --resampleWidth 1600 IMG_7078.gif --out /private/tmp/claude-501/-Users-ashwinnimmal-swdev-star-map/4376e977-8d63-4c65-bf7d-54c214e72f7f/scratchpad/old_map.png)",
+      "Bash(python3 -c \"import numpy, scipy, matplotlib, PIL; print\\('numpy', numpy.__version__, '| scipy', scipy.__version__, '| matplotlib', matplotlib.__version__, '| PIL', PIL.__version__\\)\")",
+      "Bash(/Users/ashwinnimmal/opt/anaconda3/bin/python -c \"import numpy, scipy, matplotlib, PIL; print\\('OK anaconda:', numpy.__version__, scipy.__version__, matplotlib.__version__, PIL.__version__\\)\")",
+      "Bash(/usr/bin/python3 -c \"import numpy; print\\('OK system python'\\)\")",
+      "WebSearch",
+      "WebFetch(domain:www.edsm.net)",
+      "WebFetch(domain:edastro.com)",
+      "WebFetch(domain:procedural-generation.tumblr.com)"
+    ]
+  }
+}

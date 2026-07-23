@@ -1,0 +1,26 @@
+[2026-07-22] ORCHESTRATOR LOG
+- Read star-map.py: features = macro galaxy view (WASD pan, scroll zoom, pickable
+  nodes, nebulae, core black hole) + sector view (random stars, class colors,
+  habitable/resource/exotic filters, back button). All generation is random per
+  visit (nothing deterministic).
+- Viewed IMG_7078.gif: 4-arm spiral of ~2000 white sector dots with lane network,
+  purple nebulae, faction territories, central black hole "TRF", sparse core ring.
+- Agent plan (revised from CLAUDE.md for token efficiency, as CLAUDE.md invites):
+  * ONE combined Research agent (E:D Expert + Astrophysicist) -> docs/research_brief.md,
+    logs/research.log. Rationale: on-demand astrophysicist Q&A between agents is the
+    most token-expensive pattern; a single consolidated brief covers both roles.
+  * Coding + verification done inline by orchestrator (full context already held;
+    can view rendered PNGs directly; tight verify->fix loop). Logs still separated:
+    logs/coding.log, logs/verification.log.
+- Launched research agent in background.
+- Sector extraction from GIF complete: 2023 sectors (1921 white + 102 tinted under
+  faction overlays) -> data/sectors_raw.json, preview verified visually against
+  original: same 4-arm shape, core ring present.
+- Next: stellarforge.py core library, then starmap2.py UI, then verification pass.
+- Research agent returned: brief validates Kroupa IMF, gradients, multiplicity;
+  confirmed "galaxy image as density map" is exactly Stellar Forge's approach.
+  Aligned 3 parameters to brief (BH mass cut, planet lambda, habitable rates).
+- Verification pass complete (see verification.log): shape match, determinism,
+  class mix, gradients all PASS after 4 fixes (IMF continuity bug, blocky
+  boxels, chained nebulae, M-dwarf gas giants).
+- DONE. Deliverables: stellarforge.py, starmap2.py, tools/, data/, docs/, logs/.

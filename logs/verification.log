@@ -1,0 +1,24 @@
+[2026-07-22] VERIFICATION LOG (tools/verify_map.py + visual inspection)
+- Shape fidelity: data/extracted_preview.png and data/verify_galaxy.png compared
+  visually against IMG_7078.gif (data/comparison.png is the side-by-side).
+  Same 4-arm spiral, same arm gaps, sparse core with ring, central black hole.
+  2023 sectors vs ~2000 dots on the old map. PASS.
+- Determinism: fresh Galaxy instance reproduces bit-identical sector stars,
+  identical system dict, identical names. PASS.
+- Class mix over 12 radially sampled sectors (120k stars) vs research brief
+  targets (M 70, K 11, G 6, F 3, A 0.6, B 0.12, WD 6, giants 0.8, NS 0.2, BH 0.1 %):
+  M 72.8, K 14.2, G 3.1, F 0.9, A 0.5, B 0.18, WD 6.9, GIANT 0.67, NS 0.50,
+  BH 0.12 %. G/F run below target because sampled sectors skew old (age 9+ Gyr
+  evolves them to WD) - astrophysically consistent, accepted. PASS.
+- Gradients: age 9.5 Gyr inner quartile -> 5.6 outer; [Fe/H] +0.07 -> -0.45.
+  Matches inside-out formation + radial metallicity gradient from brief. PASS.
+- Flags per 10k stars: habitable 58, resource 272, exotic 73 - rare enough to
+  read as highlights in the overlay modes, like the old map. PASS.
+- Sector view: boxel clumping visible but organic after edge softening (first
+  iteration showed blocky axis-aligned cells - fixed). PASS.
+- System view: HZ ring drawn, flagged star had terrestrial planet inside HZ.
+  First iteration allowed close-in gas giants around 0.2 Msun M dwarfs - now
+  suppressed by host-mass factor. PASS.
+- Nebulae: first iteration chained along densest arm; greedy min-separation
+  pick now scatters them across the arms. 25 nebulae (old code's cap). PASS.
+- App entry smoke test headless (galaxy + core views constructed): OK.

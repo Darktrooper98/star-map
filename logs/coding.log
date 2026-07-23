@@ -1,0 +1,35 @@
+[2026-07-22] CODING LOG
+- tools/extract_sectors.py: extracts sector dots from IMG_7078.gif.
+  Pass 1 (bright + near-neutral) -> 1921 dots; pass 2 (bright + saturated, for
+  dots under faction-color overlays) -> +102, total 2023. Filters: erosion x3
+  kills thin lines/text; blob area 8-400 px, aspect <= 2.2, bbox fill >= 0.45
+  keep only round dot blobs. Output data/sectors_raw.json in galaxy coords
+  (core at origin, half-extent 150 to match old star-map.py macro view).
+- stellarforge.py: core library.
+  * Deterministic seeding: sha256("TRF-GALAXY-V1/...path") -> 64-bit seeds for
+    numpy default_rng. Python's hash() avoided (salted per process).
+  * Galaxy: loads catalog, stable sector ordering (sort by angle,radius), derives
+    per-sector r, local density (kNN), age (11.5 -> 5 Gyr inside-out + noise),
+    [Fe/H] (+0.35 -> -0.55 gradient + noise), young_frac (arm density driven),
+    nebula flags (top-SFR, greedy min-separation), procedural syllable names,
+    hyperlane network (MST over kNN graph + short local links).
+  * generate_sector_stars(): 10,000 stars/sector. Positions via 8x8 boxel grid
+    with lognormal weights + gaussian edge softening (Stellar Forge boxels,
+    scaled down). Masses from Kroupa IMF (inverse-CDF, broken power law 1.3/2.3
+    at 0.5 Msun). Ages: sector-old population + young_frac recent component.
+    Evolution vs MS lifetime 10*M^-2.5 Gyr: giants (0.85-1.0 t_ms), WD (<8 Msun),
+    NS (8-25), BH (>25). Flags: habitable (FGK 2%, M 0.4%, x metallicity boost),
+    resource_rich (~3% x metallicity), exotic (remnants + 0.1%).
+  * generate_system(): on-demand deterministic system from (sector, star index):
+    multiplicity by class, planet count Poisson(4 x metallicity), geometric
+    orbit spacing, HZ at sqrt(L) AU, types by insolation, gas giants suppressed
+    around low-mass hosts, habitable flag honored (guaranteed HZ terrestrial).
+  BUGFIX: Kroupa continuity constant was inverted (0.5^-1 instead of 0.5^1),
+  made massive stars 4x too common. Caught via class-mix smoke test.
+- starmap2.py: UI, feature parity with star-map.py (WASD pan, scroll zoom,
+  pickable sectors, nebulae, core black hole + desolate core view, sector view
+  with Star Class / Habitable / Resource Rich / Exotic radio filters, back
+  buttons) plus new: deterministic revisits, sector metadata in title, and a
+  system view (click any star: orbits, HZ ring, planet list).
+- Post-research-brief parameter alignment: BH threshold 20->25 Msun (NS:BH ~2:1),
+  planet lambda 2.5->4.0, habitable flag rates raised to 0.02/0.004.
