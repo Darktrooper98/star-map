@@ -22,3 +22,37 @@
 - Nebulae: first iteration chained along densest arm; greedy min-separation
   pick now scatters them across the arms. 25 nebulae (old code's cap). PASS.
 - App entry smoke test headless (galaxy + core views constructed): OK.
+
+[2026-07-22] PERFORMANCE PASS
+- Benchmarks (Agg, 1400x800): before 104.5 ms/frame; after: 14.1 ms during
+  pan/zoom, 46.3 ms idle (background restored once), sector view 23.7 ms.
+- verify_galaxy.png re-rendered after optimization: visually identical to the
+  pre-optimization render (same haze, nebulae, lanes, dots, core). PASS.
+- Sector/system views unaffected (no baked layers there). App entry smoke
+  test + full verify_map.py rerun: determinism still PASS.
+
+[2026-07-22] 80K STARS + SMOOTH PAN + EDGE-PLACEMENT PASS
+- Star counts: per-sector deterministic, sample avg 82,498, all-sector mean
+  78,600 (min 55,000 / max 104,496) - "on average ~80k". PASS.
+- Class mix / flags rescale cleanly (per-sector: habitable ~490, resource
+  ~2216, exotic ~586); gradients unchanged; determinism PASS after all changes.
+- Edge placement: stars within 0.5u of border = 0.97% (below the ~2% a
+  uniform field would give; previously clip piled stars exactly on 0/100).
+  verify_sector.png inspected: clustered center, soft edges, no border lines,
+  no hard square silhouette. PASS.
+- Pan smoke test: synthetic key_press 'd' + one timer tick moved xlim
+  -150 -> -142.5, key_release stopped cleanly. PASS.
+- Perf: galaxy interaction unchanged (14 ms). Sector view: 183 ms idle full
+  field (drawn once), 34 ms during zoom via decimated preview. PASS.
+
+[2026-07-22] FILTER PICKING FIX
+- Habitable filter on busiest sector: full field + preview hidden, exactly
+  618 flagged dots visible/pickable (verify_filter.png inspected). PASS.
+- Simulated left-click PickEvent with multiple candidate indices on a
+  filtered dot opened exactly that star's system (index mapped through
+  filt_idx, nearest-to-click resolution). PASS.
+- Flag consistency: 120 habitable-flagged stars across 6 sectors all
+  generate a system containing a "terrestrial (habitable)" planet - the
+  "habitable dot -> M-class with no planets" outcome can no longer occur
+  (that was a mispick, and flagged systems always honor the flag). PASS.
+- Full verify_map.py rerun after changes: determinism PASS.

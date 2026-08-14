@@ -62,7 +62,8 @@ tot = sum(counts.values())
 print(f"\nclass mix over {len(sample)} sectors ({tot:,} stars):")
 for k in CLASS_NAMES:
     print(f"  {k:>5}: {100.0 * counts.get(k, 0) / tot:6.3f} %")
-print(f"flags per 10k: habitable {n_hab / len(sample):.0f}, "
+print(f"stars per sector (avg over sample): {tot / len(sample):,.0f}")
+print(f"flags per sector: habitable {n_hab / len(sample):.0f}, "
       f"resource {n_res / len(sample):.0f}, exotic {n_exo / len(sample):.0f}")
 
 inner = galaxy.r < np.percentile(galaxy.r, 25)

@@ -33,3 +33,54 @@
   system view (click any star: orbits, HZ ring, planet list).
 - Post-research-brief parameter alignment: BH threshold 20->25 Msun (NS:BH ~2:1),
   planet lambda 2.5->4.0, habitable flag rates raised to 0.02/0.004.
+
+[2026-07-22] PERFORMANCE PASS (galaxy view lag)
+- Profiled per-layer draw cost (Agg): full frame 104.5 ms. Haze scatter (6,069
+  s=900 alpha markers) 66.7 ms, nebulae (378 individual Circle patches) 21.9 ms,
+  lanes 7.5 ms, dots 4.4 ms. Cause: matplotlib re-rasterizes every artist on
+  every pan/zoom; the soft glow layers blend ~9M px of alpha per frame.
+- Fix 1: baked haze + nebulae into one cached 1000px RGBA image (imshow,
+  _galaxy_background). Bake vectorized (haze as one scatter): 0.32 s one-time.
+- Found matplotlib 3.5's image path is OUTPUT-bound: even an 8px source costs
+  ~45 ms/frame (viewport-sized resample each draw), so smaller bakes / nearest
+  interpolation / opaque RGB all plateau around 37-52 ms.
+- Fix 2: defer_artist_during_interaction() - background hidden during
+  scroll/WASD events, restored by a 200 ms single-shot canvas timer after
+  interaction stops. add_scroll_zoom/add_wasd_pan grew an on_interact hook;
+  clear_fig stops the timer on view change.
+- Result: interaction frames 105 -> 14.1 ms (~70 fps); idle full-quality frame
+  46 ms (drawn once); first bake 0.32 s; re-render verders visually identical.
+
+[2026-07-22] 80K STARS + SMOOTH PAN + EDGE-PLACEMENT PASS
+- Spec change: sectors now average ~80,000 stars (was fixed 10,000).
+  sector_star_count(): deterministic per-sector N(80k x density modifier,
+  7k sd) clamped 55k-110k; all-sector mean 78.6k. Marker sizes retuned for
+  the 8x denser field (back to old star-map.py scale).
+- WASD panning rebuilt: was one 10% jump per key_press (OS auto-repeat ->
+  jumpy). Now key press/release maintain a held-key set and a repeating 33 ms
+  canvas timer glides the view 2.5%/tick while keys are held; diagonal works;
+  clear_fig stops the timer and disconnects the release handler.
+- Star placement fix: boxel jitter was np.clip'd to [0,100], piling stars
+  into visible lines along the sector border (worse at 80k). Jitter is now
+  reflected back inside, and boxel weights get a gaussian radial envelope
+  (sigma 38) so density thins toward sector edges - star field, not filled
+  square. Sector axes padded to (-3,103) so nothing sits on the frame.
+- Sector view perf at ~90k stars (183 ms/frame raster cost, antialiasing
+  irrelevant): defer_artist_during_interaction gained a `placeholder` arg -
+  during zoom a 1/6-decimated preview scatter (34 ms/frame) stands in for the
+  full field, which restores on idle. Radio overlay modes update the preview's
+  colors/sizes too so the stand-in matches the active mode.
+
+[2026-07-22] FILTER PICKING FIX
+- Bug: filter modes only dimmed non-matching stars; all ~80k stars stayed
+  pickable and on_pick took evt.ind[0] (lowest index near the click), so
+  clicking a highlighted dot usually opened some unrelated background star.
+- Fix 1: filter modes now swap the full-field scatter for a `filt` scatter
+  containing ONLY the matching stars (set_offsets of the flagged subset);
+  filtered-out stars are removed entirely, not dimmed. state['filt_idx'] maps
+  subset positions back to true star indices. Title shows "X of N stars".
+- Fix 2: picks resolve via nearest_to_click() - among the pick candidates,
+  choose the star closest to the actual click coordinates (both in full-field
+  and filtered modes).
+- Interaction deferral (preview swap) now only runs in Star Class mode; the
+  filtered subsets are small enough to draw directly every frame.

@@ -1,8 +1,9 @@
 """Scaled-down Stellar Forge: deterministic procedural galaxy for the RP star map.
 
 Hierarchy (mirroring Elite: Dangerous' approach, scaled down):
-  Galaxy -> Sectors (from the old hand-made map; each = 10,000 stars) -> Boxels
-  (spatial sub-cells of a sector) -> Stars -> Systems (planets, on demand).
+  Galaxy -> Sectors (from the old hand-made map; ~80,000 stars each on
+  average) -> Boxels (spatial sub-cells of a sector) -> Stars -> Systems
+  (planets, on demand).
 
 Every level is generated deterministically from GALAXY_SEED, so any sector or
 individual star system can be regenerated on demand and is always identical.
@@ -31,7 +32,8 @@ from scipy.sparse import coo_matrix
 GALAXY_SEED = "TRF-GALAXY-V1"
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SECTOR_FILE = os.path.join(ROOT, "data", "sectors_raw.json")
-STARS_PER_SECTOR = 10_000
+STARS_PER_SECTOR_MEAN = 80_000   # per-sector counts vary around this
+STARS_PER_SECTOR_SD = 7_000
 NUM_NEBULAE = 25
 BOXELS_PER_SIDE = 8          # sector view is an 8x8 boxel grid
 
@@ -170,27 +172,45 @@ class Galaxy:
         return sorted(pairs)
 
     # ------------------------------------------------------------------ stars
-    def generate_sector_stars(self, sector_id, n_stars=STARS_PER_SECTOR):
+    def sector_star_count(self, sector_id):
+        """Deterministic star count for a sector: ~80,000 on average, denser
+        sectors slightly above, sparser ones below."""
+        rng = _rng("sector", sector_id, "count")
+        n = rng.normal(STARS_PER_SECTOR_MEAN * (0.9 + 0.2 * self.density[sector_id]),
+                       STARS_PER_SECTOR_SD)
+        return int(np.clip(n, 55_000, 110_000))
+
+    def generate_sector_stars(self, sector_id, n_stars=None):
         """Deterministically generate the stars of one sector.
 
         Returns a dict of arrays (all length n_stars): x, y (0-100 sector
         coords), cls (index into CLASS_NAMES), mass, age_gyr, color, size,
         habitable, resource_rich, exotic.
         """
+        if n_stars is None:
+            n_stars = self.sector_star_count(sector_id)
         rng = _rng("sector", sector_id, "stars")
 
         # --- positions: boxel grid with lognormal weights (Stellar Forge's
         # boxels, scaled down) + per-boxel jitter -> clumpy, stable texture.
         nb = BOXELS_PER_SIDE
+        side = 100.0 / nb
         w = _rng("sector", sector_id, "boxels").lognormal(0.0, 0.8, nb * nb)
+        # Soft radial envelope on the boxel weights: density thins toward the
+        # sector edges so it reads as a star field, not a filled square.
+        centers = (np.arange(nb) + 0.5) * side
+        cxg, cyg = np.meshgrid(centers, centers)
+        w *= np.exp(-((cxg - 50) ** 2 + (cyg - 50) ** 2) / (2 * 38.0 ** 2)).ravel()
         w /= w.sum()
         boxel = rng.choice(nb * nb, size=n_stars, p=w)
         bx, by = boxel % nb, boxel // nb
-        side = 100.0 / nb
         # Soft boxel edges: gaussian scatter past the cell bounds so the grid
-        # doesn't read as blocks.
-        x = np.clip((bx + rng.random(n_stars)) * side + rng.normal(0, side * 0.25, n_stars), 0, 100)
-        y = np.clip((by + rng.random(n_stars)) * side + rng.normal(0, side * 0.25, n_stars), 0, 100)
+        # doesn't read as blocks. Out-of-bounds jitter is REFLECTED back in;
+        # clipping piled stars into hard lines along the map border.
+        x = (bx + rng.random(n_stars)) * side + rng.normal(0, side * 0.25, n_stars)
+        y = (by + rng.random(n_stars)) * side + rng.normal(0, side * 0.25, n_stars)
+        x = np.where(np.abs(x) > 100, 200 - np.abs(x), np.abs(x))
+        y = np.where(np.abs(y) > 100, 200 - np.abs(y), np.abs(y))
 
         # --- ages: mix of the sector's old population and recent formation.
         young = rng.random(n_stars) < self.young_frac[sector_id]
@@ -222,9 +242,9 @@ class Galaxy:
         exotic = np.isin(cls, [9, 10]) | (rng.random(n_stars) < 0.001)
 
         color = np.array(CLASS_COLORS)[cls]
-        size = np.clip(mass, 0.08, 30) ** 0.5 * 2.4
-        size[np.isin(cls, [7, 9])] = 1.0                 # compact remnants
-        size[cls == 10] = 2.5
+        size = np.clip(mass, 0.08, 30) ** 0.5 * 1.2
+        size[np.isin(cls, [7, 9])] = 0.6                 # compact remnants
+        size[cls == 10] = 1.5
 
         return {"x": x, "y": y, "cls": cls, "mass": mass, "age_gyr": age,
                 "color": color, "size": size, "habitable": habitable,
